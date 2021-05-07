@@ -1120,11 +1120,14 @@ video_frame_process(       )
           
         }
         
-        if(g_src_count > 1)
+        if(i > 0)
         {
+           static int flag = 1;
+           flag = !flag;
+           pipeline_param.output_background_color = flag == 0 ? 0x0 : 0xffff0000;
            pipeline_param.pipeline_flags |= VA_PROC_PIPELINE_FAST;//for showing all sub-layers
            pipeline_param.filter_flags |= VA_FILTER_SCALING_FAST; //for showing background color
-        }
+
         pipeline_param.surface = g_in_surface_ids[i];
         pipeline_param.surface_region = &g_src_info[i].region_in;
         pipeline_param.output_region = &g_src_info[i].region_out;
@@ -1139,6 +1142,7 @@ video_frame_process(       )
                                    &pipeline_param,
                                    &pipeline_param_buf_ids[i]);
         CHECK_VASTATUS(va_status, "vaCreateBuffer");
+        }
     }
     printf("\nStart to process 1 frame, ...\n");
     struct timespec Pre_time;
@@ -1152,8 +1156,8 @@ video_frame_process(       )
 
     va_status = vaRenderPicture(va_dpy,
                                 context_id,
-                                &pipeline_param_buf_ids[0],
-                                g_src_count);
+                                &pipeline_param_buf_ids[1],
+                                1);
     CHECK_VASTATUS(va_status, "vaRenderPicture");
 
     va_status = vaEndPicture(va_dpy, context_id);
@@ -1223,9 +1227,12 @@ vpp_context_create()
                                 g_src_info[i].src_format, g_src_info[i].rt_format);
         CHECK_VASTATUS(va_status, "vaCreateSurfaces for input");
     }
+	/*
     va_status = create_surface(&g_out_surface_id, g_out_pic_width, g_out_pic_height,
                                 g_out_fourcc, g_out_format);
     CHECK_VASTATUS(va_status, "vaCreateSurfaces for output");
+*/
+		g_out_surface_id = g_in_surface_ids[0];
 
     va_status = vaCreateConfig(va_dpy,
                                VAProfileNone,
@@ -1255,8 +1262,8 @@ vpp_context_destroy()
         if(g_in_surface_ids[j] != VA_INVALID_SURFACE)
             vaDestroySurfaces(va_dpy, &g_in_surface_ids[j], 1);
     }
-    if(g_out_surface_id != VA_INVALID_SURFACE)
-         vaDestroySurfaces(va_dpy, &g_out_surface_id, 1);
+   // if(g_out_surface_id != VA_INVALID_SURFACE)
+       //  vaDestroySurfaces(va_dpy, &g_out_surface_id, 1);
     vaDestroyContext(va_dpy, context_id);
     vaDestroyConfig(va_dpy, config_id);
 
